@@ -1,6 +1,7 @@
 package sddns
 
 import (
+	"log"
 	"net"
 	"time"
 	//"strconv"
@@ -12,8 +13,12 @@ import (
 	"fmt"
 	"github.com/miekg/coredns/middleware"
 	"github.com/miekg/coredns/request"
-	"strconv"
+	//"strconv"
+	"net/url"
+	"encoding/json"
+	"net/http"
 )
+
 type Sddns struct {
 
 	Next middleware.Handler
@@ -26,42 +31,62 @@ type Sddns struct {
 }
 
 type Rule struct {
-	clientToken string
-	ipv4 string
-	ipv6 string
-	ttl int //Time to live of the DNS records
-	expire int //How long the rule will stay in cache until the controller is re-queried
+	ClientToken string
+	Ipv4 string
+	Ipv6 string
+	Ttl uint32 //Time to live of the DNS records
+	Timeout uint32 //How long the rule will stay in cache until the controller is re-queried
+	//createTime int64 //Time in seconds when this rule was created
 }
 /**
  * Request for Controller
  */
 func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+
+	log.Printf("Controller %s\n", s.controllerAddress)
 	state := request.Request{W: w, Req: r}
 	labels := dns.SplitDomainName(state.QName())
-	fmt.Print("Labels " + labels)
-	if len(labels) < s.tokenLabelIndex {
-		return middleware.NextOrFailure(s.Name(), s.Next, ctx, w, r)
-	}
-	token := labels[s.tokenLabelIndex]
+	fmt.Printf("Labels %v",labels)
 
-	if rule, ok := s.rules[token]; ok {
+	var rule Rule
 
-		//Is the rule expired?
-		if time.Now().Unix() > rule.expire {
-			//Ask controller
-			delete(s.rules, token)
+	//TODO The query should be checked if it matchs, is this in Corefile?
 
-		} else {
-			//Rule is good
-			sendResponse(rule, state)
-		}
+	//Not enough labels to have token
+	if uint8(len(labels)) < s.tokenLabelIndex {
+		log.Println("Not enough labels")
+		rule = askController(s.controllerAddress, "")
+
+	//Could have token
 	} else {
-		//cache miss, ask controller
+		token := labels[s.tokenLabelIndex]
+		//TODO verify token MAC
+
+		var ok bool
+		var val *Rule
+		if val, ok = s.rules[token]; ok {
+			//Is the rule expired?
+			//if time.Now().Unix() > (*val).createTime + int64((*val).Timeout) {
+			if time.Now().Unix() > 0 {
+				delete(s.rules, token)
+				rule = askController(s.controllerAddress, token)
+			} else {
+				//Were good
+				rule = (*val)
+			}
+		} else {
+			//cache miss, ask controller
+			rule = askController(s.controllerAddress, "")
+		}
 	}
 
+	sendResponse(rule, state)
 	return dns.RcodeSuccess, nil
 }
+
+
 func sendResponse(rule Rule, state request.Request) {
+	log.Println("Sending response")
 	a := new(dns.Msg)
 	a.SetReply(state.Req)
 	a.Compress = true
@@ -72,16 +97,46 @@ func sendResponse(rule Rule, state request.Request) {
 	switch state.Family() {
 	case 1:
 		rr = new(dns.A)
-		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.ttl}
-		rr.(*dns.A).A = net.ParseIP(rule.ipv4).To4()
+		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
+		rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
 	case 2:
 		rr = new(dns.AAAA)
-		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.ttl}
-		rr.(*dns.AAAA).AAAA = net.ParseIP(rule.ipv6)
+		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
+		rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
 	}
-
+	a.Extra = []dns.RR{rr}
 	state.SizeAndDo(a)
 	state.W.WriteMsg(a)
 }
+
+func askController(controllerAddress string, token string)(Rule)  {
+	u, err := url.ParseRequestURI(controllerAddress)
+	if err != nil {
+		log.Fatal("[Error] Parse %s\n", err)
+	}
+	u.Path = fmt.Sprintf("/rule/%s", token)
+
+	log.Printf("Endpoint %s\n", u.String())
+
+	rule := Rule{}
+	err = getJson(u.String(), &rule)
+	if err != nil {
+		log.Printf("[Error] %s\n", err)
+	}
+	log.Printf("Controller %+v\n", rule)
+	return rule
+}
+var myClient = &http.Client{Timeout: 10 * time.Second}
+
+func getJson(url string, target interface{}) error {
+	r, err := myClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	return json.NewDecoder(r.Body).Decode(target)
+}
+
 // Name implements the Handler interface.
 func (s Sddns) Name() string { return "sddns" }
