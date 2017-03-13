@@ -29,19 +29,12 @@ func setupSddns(c *caddy.Controller) error {
 					sddns.controllerAddress = value
 				case "controller_token":
 					sddns.controllerToken = value
-				case "token_label_index":
-					//string, base, bitSize
-					i, err := strconv.ParseInt(value, 10, 8)
-					if err != nil {
-						return c.ArgErr()
-					}
-					sddns.tokenLabelIndex = uint8(i)
 				}
 			}
 		}
 	}
 
-	if (sddns.tokenLabelIndex == 0) || (sddns.controllerToken == "") || (sddns.controllerAddress == "") {
+	if ( (sddns.controllerToken == "") || (sddns.controllerAddress == "") {
 		return middleware.Error("sddns", c.ArgErr())
 	}
 

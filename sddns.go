@@ -20,9 +20,7 @@ import (
 )
 
 type Sddns struct {
-	Next middleware.Handler
-	// Index 0 would be TLD
-	tokenLabelIndex   uint8
+	Next              middleware.Handler
 	controllerToken   string
 	controllerAddress string
 
@@ -52,32 +50,25 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	//TODO The query should be checked if it matchs, is this in Corefile?
 
-	//Not enough labels to have token
-	if uint8(len(labels)) < s.tokenLabelIndex {
-		log.Println("Not enough labels")
-		rule = askController(s.controllerAddress, "")
+	//The first label is the most subdomain
+	token := labels[0]
+	//TODO verify token MAC
 
-		//Could have token
-	} else {
-		token := labels[s.tokenLabelIndex]
-		//TODO verify token MAC
-
-		var ok bool
-		var val *Rule
-		if val, ok = s.rules[token]; ok {
-			//Is the rule expired?
-			//if time.Now().Unix() > (*val).createTime + int64((*val).Timeout) {
-			if time.Now().Unix() > 0 {
-				delete(s.rules, token)
-				rule = askController(s.controllerAddress, token)
-			} else {
-				//Were good
-				rule = (*val)
-			}
+	var ok bool
+	var val *Rule
+	if val, ok = s.rules[token]; ok {
+		//Is the rule expired?
+		//if time.Now().Unix() > (*val).createTime + int64((*val).Timeout) {
+		if time.Now().Unix() > 0 {
+			delete(s.rules, token)
+			rule = askController(s.controllerAddress, token)
 		} else {
-			//cache miss, ask controller
-			rule = askController(s.controllerAddress, "")
+			//Were good
+			rule = (*val)
 		}
+	} else {
+		//cache miss, ask controller
+		rule = askController(s.controllerAddress, "")
 	}
 
 	sendResponse(rule, state)
