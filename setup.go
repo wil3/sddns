@@ -1,12 +1,11 @@
 package sddns
 
 import (
+	"github.com/coredns/coredns/core/dnsserver"
+	"github.com/coredns/coredns/middleware"
 	"github.com/mholt/caddy"
-	"github.com/miekg/coredns/core/dnsserver"
-	"github.com/miekg/coredns/middleware"
 	"strconv"
 )
-
 
 func init() {
 	caddy.RegisterPlugin("sddns", caddy.Plugin{
@@ -32,7 +31,7 @@ func setup(c *caddy.Controller) error {
 					sddns.controllerToken = value
 				case "token_label_index":
 					i, err := strconv.ParseInt(value, 10, 8)
-					if err != nil{
+					if err != nil {
 						return c.ArgErr()
 					}
 					sddns.tokenLabelIndex = uint8(i)
@@ -53,4 +52,3 @@ func setup(c *caddy.Controller) error {
 
 	return nil
 }
-

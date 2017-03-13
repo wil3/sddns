@@ -8,23 +8,22 @@ import (
 
 	//"github.com/miekg/coredns/request"
 
-	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 	"fmt"
 	"github.com/miekg/coredns/middleware"
 	"github.com/miekg/coredns/request"
+	"github.com/miekg/dns"
+	"golang.org/x/net/context"
 	//"strconv"
-	"net/url"
 	"encoding/json"
 	"net/http"
+	"net/url"
 )
 
 type Sddns struct {
-
 	Next middleware.Handler
 	// Index 0 would be TLD
-	tokenLabelIndex uint8
-	controllerToken string
+	tokenLabelIndex   uint8
+	controllerToken   string
 	controllerAddress string
 
 	rules map[string]*Rule
@@ -32,21 +31,22 @@ type Sddns struct {
 
 type Rule struct {
 	ClientToken string
-	Ipv4 string
-	Ipv6 string
-	Ttl uint32 //Time to live of the DNS records
-	Timeout uint32 //How long the rule will stay in cache until the controller is re-queried
+	Ipv4        string
+	Ipv6        string
+	Ttl         uint32 //Time to live of the DNS records
+	Timeout     uint32 //How long the rule will stay in cache until the controller is re-queried
 	//createTime int64 //Time in seconds when this rule was created
 }
+
 /**
- * Request for Controller
+ * DNS query
  */
 func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 
 	log.Printf("Controller %s\n", s.controllerAddress)
 	state := request.Request{W: w, Req: r}
 	labels := dns.SplitDomainName(state.QName())
-	fmt.Printf("Labels %v",labels)
+	fmt.Printf("Labels %v", labels)
 
 	var rule Rule
 
@@ -57,7 +57,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		log.Println("Not enough labels")
 		rule = askController(s.controllerAddress, "")
 
-	//Could have token
+		//Could have token
 	} else {
 		token := labels[s.tokenLabelIndex]
 		//TODO verify token MAC
@@ -84,6 +84,23 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	return dns.RcodeSuccess, nil
 }
 
+func askController(controllerAddress string, token string) Rule {
+	u, err := url.ParseRequestURI(controllerAddress)
+	if err != nil {
+		log.Fatal("[Error] Parse %s\n", err)
+	}
+	u.Path = fmt.Sprintf("/rule/%s", token)
+
+	log.Printf("Endpoint %s\n", u.String())
+
+	rule := Rule{}
+	err = getJson(u.String(), &rule)
+	if err != nil {
+		log.Printf("[Error] %s\n", err)
+	}
+	log.Printf("Controller %+v\n", rule)
+	return rule
+}
 
 func sendResponse(rule Rule, state request.Request) {
 	log.Println("Sending response")
@@ -109,23 +126,6 @@ func sendResponse(rule Rule, state request.Request) {
 	state.W.WriteMsg(a)
 }
 
-func askController(controllerAddress string, token string)(Rule)  {
-	u, err := url.ParseRequestURI(controllerAddress)
-	if err != nil {
-		log.Fatal("[Error] Parse %s\n", err)
-	}
-	u.Path = fmt.Sprintf("/rule/%s", token)
-
-	log.Printf("Endpoint %s\n", u.String())
-
-	rule := Rule{}
-	err = getJson(u.String(), &rule)
-	if err != nil {
-		log.Printf("[Error] %s\n", err)
-	}
-	log.Printf("Controller %+v\n", rule)
-	return rule
-}
 var myClient = &http.Client{Timeout: 10 * time.Second}
 
 func getJson(url string, target interface{}) error {
