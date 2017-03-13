@@ -112,7 +112,8 @@ func sendResponse(rule Rule, state request.Request) {
 		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
 		rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
 	}
-	a.Extra = []dns.RR{rr}
+	//a.Extra = []dns.RR{rr}
+	a.Answer = []dns.RR{rr}
 	state.SizeAndDo(a)
 	state.W.WriteMsg(a)
 }
