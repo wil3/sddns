@@ -46,7 +46,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	log.Printf("Controller %s\n", s.controllerAddress)
 	state := request.Request{W: w, Req: r}
 	labels := dns.SplitDomainName(state.QName())
-	fmt.Printf("Labels %v", labels)
+	log.Printf("Labels %v\n", labels)
 
 	var rule Rule
 

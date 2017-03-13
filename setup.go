@@ -10,7 +10,7 @@ import (
 func init() {
 	caddy.RegisterPlugin("sddns", caddy.Plugin{
 		ServerType: "dns",
-		Action:     setup,
+		Action:     setupSddns,
 	})
 }
 
@@ -30,6 +30,7 @@ func setupSddns(c *caddy.Controller) error {
 				case "controller_token":
 					sddns.controllerToken = value
 				case "token_label_index":
+					//string, base, bitSize
 					i, err := strconv.ParseInt(value, 10, 8)
 					if err != nil {
 						return c.ArgErr()
