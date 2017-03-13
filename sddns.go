@@ -103,6 +103,7 @@ func sendResponse(rule Rule, state request.Request) {
 
 	switch state.Family() {
 	case 1:
+		log.Println("IPv4")
 		rr = new(dns.A)
 		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
 		rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
