@@ -14,7 +14,7 @@ func init() {
 	})
 }
 
-func setup(c *caddy.Controller) error {
+func setupSddns(c *caddy.Controller) error {
 	sddns := Sddns{}
 	for c.Next() {
 		if c.Val() == "sddns" {
