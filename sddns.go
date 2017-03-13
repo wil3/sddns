@@ -23,8 +23,7 @@ type Sddns struct {
 	Next              middleware.Handler
 	controllerToken   string
 	controllerAddress string
-
-	rules map[string]*Rule
+	rules             map[string]*Rule
 }
 
 type Rule struct {

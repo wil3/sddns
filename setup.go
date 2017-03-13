@@ -4,7 +4,6 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
 	"github.com/mholt/caddy"
-	"strconv"
 )
 
 func init() {
@@ -34,7 +33,7 @@ func setupSddns(c *caddy.Controller) error {
 		}
 	}
 
-	if ( (sddns.controllerToken == "") || (sddns.controllerAddress == "") {
+	if (sddns.controllerToken == "") || (sddns.controllerAddress == "") {
 		return middleware.Error("sddns", c.ArgErr())
 	}
 
