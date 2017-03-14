@@ -45,6 +45,10 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	labels := dns.SplitDomainName(state.QName())
 	log.Printf("Labels %v\n", labels)
 
+	//TODO MOVE ME TO CONFIG
+	if len(labels) > 4 {
+		return 0, nil
+	}
 	var rule Rule
 
 	//TODO The query should be checked if it matchs, is this in Corefile?
@@ -67,7 +71,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		}
 	} else {
 		//cache miss, ask controller
-		rule = askController(s.controllerAddress, "")
+		rule = askController(s.controllerAddress, token)
 	}
 
 	sendResponse(rule, state)
@@ -75,6 +79,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 }
 
 func askController(controllerAddress string, token string) Rule {
+	log.Printf("clients token is \"%s\"", token)
 	u, err := url.ParseRequestURI(controllerAddress)
 	if err != nil {
 		log.Fatal("[Error] Parse %s\n", err)
