@@ -45,10 +45,6 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	labels := dns.SplitDomainName(state.QName())
 	log.Printf("Labels %v\n", labels)
 
-	//TODO MOVE ME TO CONFIG
-	if len(labels) > 4 {
-		return 0, nil
-	}
 	var rule Rule
 
 	//TODO The query should be checked if it matchs, is this in Corefile?
@@ -57,28 +53,34 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	token := labels[0]
 	//TODO verify token MAC
 
-	var ok bool
-	var val *Rule
-	if val, ok = s.rules[token]; ok {
+	if val, ok := s.rules[token]; ok {
 		//Is the rule expired?
 		//if time.Now().Unix() > (*val).createTime + int64((*val).Timeout) {
 		if time.Now().Unix() > 0 {
 			delete(s.rules, token)
-			rule = askController(s.controllerAddress, token)
+			rule, err := askController(s.controllerAddress, token)
+			if err != nil {
+				return dns.RcodeNameError, err
+			}
+			sendResponse(rule, state)
 		} else {
 			//Were good
 			rule = (*val)
 		}
 	} else {
 		//cache miss, ask controller
-		rule = askController(s.controllerAddress, token)
+		rule, err := askController(s.controllerAddress, state.QName())
+		if err != nil {
+			return dns.RcodeNameError, err
+		}
+		sendResponse(rule, state)
 	}
 
 	sendResponse(rule, state)
 	return dns.RcodeSuccess, nil
 }
 
-func askController(controllerAddress string, token string) Rule {
+func askController(controllerAddress string, token string) (Rule, error) {
 	log.Printf("clients token is \"%s\"", token)
 	u, err := url.ParseRequestURI(controllerAddress)
 	if err != nil {
@@ -92,9 +94,10 @@ func askController(controllerAddress string, token string) Rule {
 	err = getJson(u.String(), &rule)
 	if err != nil {
 		log.Printf("[Error] %s\n", err)
+		return rule, err
 	}
 	log.Printf("Controller %+v\n", rule)
-	return rule
+	return rule, nil
 }
 
 func sendResponse(rule Rule, state request.Request) {
