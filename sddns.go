@@ -47,32 +47,20 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	var rule Rule
 
-	//TODO The query should be checked if it matchs, is this in Corefile?
-
-	//The first label is the most subdomain
-	token := labels[0]
 	//TODO verify token MAC
 
-	if val, ok := s.rules[token]; ok {
-		//Is the rule expired?
-		//if time.Now().Unix() > (*val).createTime + int64((*val).Timeout) {
-		if time.Now().Unix() > 0 {
-			delete(s.rules, token)
-			rule, err := askController(s.controllerAddress, token)
-			if err != nil {
-				return dns.RcodeNameError, err
-			}
-			sendResponse(rule, state)
-		} else {
-			//Were good
-			rule = (*val)
-		}
+	if val, ok := s.rules[state.QName()]; ok {
+		//Were good, already have it
+		log.Println("Rule already exists in cache, returning")
+		rule = (*val)
+		sendResponse(rule, state)
 	} else {
 		//cache miss, ask controller
 		rule, err := askController(s.controllerAddress, state.QName())
 		if err != nil {
 			return dns.RcodeNameError, err
 		}
+		s.rules[state.QName()] = &rule
 		sendResponse(rule, state)
 	}
 
