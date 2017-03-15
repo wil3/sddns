@@ -47,8 +47,6 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	var rule Rule
 
-	//TODO verify token MAC
-
 	if val, ok := s.rules[state.QName()]; ok {
 		//Were good, already have it
 		log.Println("Rule already exists in cache, returning")
@@ -64,19 +62,18 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		sendResponse(rule, state)
 	}
 
-	sendResponse(rule, state)
 	return dns.RcodeSuccess, nil
 }
 
-func askController(controllerAddress string, token string) (Rule, error) {
-	log.Printf("clients token is \"%s\"", token)
+func askController(controllerAddress string, qname string) (Rule, error) {
+	log.Printf("Qname is \"%s\"", qname)
 	u, err := url.ParseRequestURI(controllerAddress)
 	if err != nil {
 		log.Fatal("[Error] Parse %s\n", err)
 	}
-	u.Path = fmt.Sprintf("/rule/%s", token)
+	u.Path = fmt.Sprintf("/rule/%s", qname)
 
-	log.Printf("Endpoint %s\n", u.String())
+	log.Printf("Sending request to controller %s\n", u.String())
 
 	rule := Rule{}
 	err = getJson(u.String(), &rule)
@@ -84,7 +81,7 @@ func askController(controllerAddress string, token string) (Rule, error) {
 		log.Printf("[Error] %s\n", err)
 		return rule, err
 	}
-	log.Printf("Controller %+v\n", rule)
+	log.Printf("Controller response: \"%+v\"", rule)
 	return rule, nil
 }
 
