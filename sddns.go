@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 	//"strconv"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -120,6 +121,10 @@ func getJson(url string, target interface{}) error {
 		return err
 	}
 	defer r.Body.Close()
+
+	if r.StatusCode == http.StatusNotFound {
+		return errors.New("Not found")
+	}
 
 	return json.NewDecoder(r.Body).Decode(target)
 }
