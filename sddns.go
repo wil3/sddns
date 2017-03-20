@@ -40,7 +40,7 @@ type Rule struct {
  */
 func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 
-	log.Printf("Controller %s\n", s.controllerAddress)
+	log.Println("BEGIN")
 	state := request.Request{W: w, Req: r}
 	labels := dns.SplitDomainName(state.QName())
 	log.Printf("Labels %v\n", labels)
@@ -62,6 +62,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		sendResponse(rule, state)
 	}
 
+	log.Println("END")
 	return dns.RcodeSuccess, nil
 }
 
