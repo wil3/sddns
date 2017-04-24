@@ -101,10 +101,24 @@ func sendResponse(rule Rule, state request.Request) {
 	log.Println("Type", state.Type())
 	switch state.Family() {
 	case 1:
-		log.Println("IPv4")
-		rr = new(dns.A)
-		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
-		rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
+		if state.Type() == "AAAA" {
+			rr = new(dns.SOA)
+			rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
+			rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
+			rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
+			rr.(*dns.SOA).Serial = 2017041200
+			rr.(*dns.SOA).Refresh = 1200
+			rr.(*dns.SOA).Retry = 900
+			rr.(*dns.SOA).Expire = 1209600
+			rr.(*dns.SOA).Minttl = 3600
+
+			log.Println("IPv6*")
+		} else {
+			log.Println("IPv4")
+			rr = new(dns.A)
+			rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
+			rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
+		}
 	case 2:
 		log.Println("IPv6*")
 		//rr = new(dns.AAAA)
