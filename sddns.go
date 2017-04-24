@@ -43,6 +43,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	log.Println("BEGIN")
 	state := request.Request{W: w, Req: r}
+
 	labels := dns.SplitDomainName(state.QName())
 	log.Printf("Labels %v\n", labels)
 
@@ -103,11 +104,19 @@ func sendResponse(rule Rule, state request.Request) {
 		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
 		rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
 	case 2:
-		rr = new(dns.AAAA)
-		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
-		rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
+		//rr = new(dns.AAAA)
+		//rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
+		//rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
+		rr = new(dns.SOA)
+		rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
+		rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
+		rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
+		rr.(*dns.SOA).Serial = 2017041200
+		rr.(*dns.SOA).Refresh = 1200
+		rr.(*dns.SOA).Retry = 900
+		rr.(*dns.SOA).Expire = 1209600
+		rr.(*dns.SOA).Minttl = 3600
 	}
-	//a.Extra = []dns.RR{rr}
 	a.Answer = []dns.RR{rr}
 	state.SizeAndDo(a)
 	state.W.WriteMsg(a)
