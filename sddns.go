@@ -97,6 +97,7 @@ func sendResponse(rule Rule, state request.Request) {
 
 	var rr dns.RR
 
+	log.Println("State family %d", state.Family())
 	switch state.Family() {
 	case 1:
 		log.Println("IPv4")
