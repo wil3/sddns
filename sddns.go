@@ -104,6 +104,7 @@ func sendResponse(rule Rule, state request.Request) {
 		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
 		rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
 	case 2:
+		log.Println("IPv6*")
 		//rr = new(dns.AAAA)
 		//rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
 		//rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
