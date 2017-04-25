@@ -53,10 +53,11 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		a := new(dns.Msg)
 		a.SetReply(state.Req)
 		a.Compress = true
-		a.Authoritative = true
+		//a.Authoritative = true
 		a.Answer = []dns.RR{soaRecord()}
 		state.SizeAndDo(a)
 		state.W.WriteMsg(a)
+		log.Println("Sending Reponse")
 		return dns.RcodeSuccess, nil
 	}
 	if val, ok := s.rules[state.QName()]; ok {
@@ -98,18 +99,22 @@ func askController(controllerAddress string, qname string) (Rule, error) {
 	return rule, nil
 }
 func soaRecord() dns.RR {
-
-	var rr dns.RR
-	rr = new(dns.SOA)
-	rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
-	rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
-	rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
-	rr.(*dns.SOA).Serial = 2017041201
-	rr.(*dns.SOA).Refresh = 1200
-	rr.(*dns.SOA).Retry = 900
-	rr.(*dns.SOA).Expire = 1209600
-	rr.(*dns.SOA).Minttl = 3600
-	return rr
+	/*
+		var rr dns.RR
+		rr = new(dns.SOA)
+		rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
+		rr.(*dns.SOA).Ns = "ns1.token.wfk.io."
+		rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io."
+		rr.(*dns.SOA).Serial = 2017041201
+		rr.(*dns.SOA).Refresh = 1200
+		rr.(*dns.SOA).Retry = 900
+		rr.(*dns.SOA).Expire = 1209600
+		rr.(*dns.SOA).Minttl = 3600
+	*/
+	rr := "token.wfk.io. 0 IN SOA ns1.token.wfk.io. hostmaster.token.wfk.io.token.wfk.io. 2017041200 1200 900 1209600 3600"
+	r, _ := dns.NewRR(rr)
+	return r.(*dns.SOA)
+	//return rr
 
 }
 func sendResponse(rule Rule, state request.Request) {
