@@ -103,7 +103,7 @@ func sendResponse(rule Rule, state request.Request) {
 	case 1:
 		if state.Type() == "AAAA" {
 			rr = new(dns.SOA)
-			rr.(*dns.SOA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
+			rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
 			rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
 			rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
 			rr.(*dns.SOA).Serial = 2017041201
