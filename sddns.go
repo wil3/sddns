@@ -49,6 +49,16 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	var rule Rule
 
+	if state.Type() == "AAAA" {
+		a := new(dns.Msg)
+		a.SetReply(state.Req)
+		a.Compress = true
+		a.Authoritative = true
+		a.Answer = []dns.RR{soaRecord()}
+		state.SizeAndDo(a)
+		state.W.WriteMsg(a)
+		return dns.RcodeSuccess, nil
+	}
 	if val, ok := s.rules[state.QName()]; ok {
 		//Were good, already have it
 		log.Println("Rule already exists in cache, returning")
@@ -87,7 +97,21 @@ func askController(controllerAddress string, qname string) (Rule, error) {
 	log.Printf("Controller response: \"%+v\"", rule)
 	return rule, nil
 }
+func soaRecord() dns.RR {
 
+	var rr dns.RR
+	rr = new(dns.SOA)
+	rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
+	rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
+	rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
+	rr.(*dns.SOA).Serial = 2017041201
+	rr.(*dns.SOA).Refresh = 1200
+	rr.(*dns.SOA).Retry = 900
+	rr.(*dns.SOA).Expire = 1209600
+	rr.(*dns.SOA).Minttl = 3600
+	return rr
+
+}
 func sendResponse(rule Rule, state request.Request) {
 	log.Println("Sending response")
 	a := new(dns.Msg)
@@ -102,15 +126,6 @@ func sendResponse(rule Rule, state request.Request) {
 	switch state.Family() {
 	case 1:
 		if state.Type() == "AAAA" {
-			rr = new(dns.SOA)
-			rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
-			rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
-			rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
-			rr.(*dns.SOA).Serial = 2017041201
-			rr.(*dns.SOA).Refresh = 1200
-			rr.(*dns.SOA).Retry = 900
-			rr.(*dns.SOA).Expire = 1209600
-			rr.(*dns.SOA).Minttl = 3600
 
 			log.Println("IPv6*")
 		} else {
@@ -120,19 +135,10 @@ func sendResponse(rule Rule, state request.Request) {
 			rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
 		}
 	case 2:
-		log.Println("IPv6*")
+		log.Println("IPv6**")
 		//rr = new(dns.AAAA)
 		//rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: rule.Ttl}
 		//rr.(*dns.AAAA).AAAA = net.ParseIP(rule.Ipv6)
-		rr = new(dns.SOA)
-		rr.(*dns.SOA).Hdr = dns.RR_Header{Name: "token.wfk.io.", Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 0}
-		rr.(*dns.SOA).Ns = "ns1.token.wfk.io"
-		rr.(*dns.SOA).Mbox = "hostmaster.token.wfk.io.token.wfk.io"
-		rr.(*dns.SOA).Serial = 2017041200
-		rr.(*dns.SOA).Refresh = 1200
-		rr.(*dns.SOA).Retry = 900
-		rr.(*dns.SOA).Expire = 1209600
-		rr.(*dns.SOA).Minttl = 3600
 	}
 	a.Answer = []dns.RR{rr}
 	state.SizeAndDo(a)
