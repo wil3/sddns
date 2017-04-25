@@ -53,7 +53,7 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		a := new(dns.Msg)
 		a.SetReply(state.Req)
 		a.Compress = true
-		//a.Authoritative = true
+		a.Authoritative = true
 		a.Answer = []dns.RR{soaRecord()}
 		state.SizeAndDo(a)
 		state.W.WriteMsg(a)
