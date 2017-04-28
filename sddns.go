@@ -24,6 +24,7 @@ type Sddns struct {
 	Next              middleware.Handler
 	controllerToken   string
 	controllerAddress string
+	static            int
 	rules             map[string]*Rule
 }
 
@@ -60,6 +61,12 @@ func (s Sddns) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		log.Println("Sending Reponse")
 		return dns.RcodeSuccess, nil
 	}
+
+	if s.static == 1 && state.Type() == "A" {
+		sendResponse2("52.200.102.96", 0, state)
+		return dns.RcodeSuccess, nil
+	}
+
 	if val, ok := s.rules[state.QName()]; ok {
 		//Were good, already have it
 		log.Println("Rule already exists in cache, returning")
@@ -118,6 +125,9 @@ func soaRecord() dns.RR {
 
 }
 func sendResponse(rule Rule, state request.Request) {
+	sendResponse2(rule.Ipv4, rule.Ttl, state)
+}
+func sendResponse2(ipv4 string, ttl uint32, state request.Request) {
 	log.Println("Sending response")
 	a := new(dns.Msg)
 	a.SetReply(state.Req)
@@ -136,8 +146,8 @@ func sendResponse(rule Rule, state request.Request) {
 		} else {
 			log.Println("IPv4")
 			rr = new(dns.A)
-			rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: rule.Ttl}
-			rr.(*dns.A).A = net.ParseIP(rule.Ipv4).To4()
+			rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: ttl}
+			rr.(*dns.A).A = net.ParseIP(ipv4).To4()
 		}
 	case 2:
 		log.Println("IPv6**")

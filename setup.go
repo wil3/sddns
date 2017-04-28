@@ -4,6 +4,7 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
 	"github.com/mholt/caddy"
+	"strconv"
 )
 
 func init() {
@@ -28,6 +29,9 @@ func setupSddns(c *caddy.Controller) error {
 					sddns.controllerAddress = value
 				case "controller_token":
 					sddns.controllerToken = value
+				case "static":
+					i, _ := strconv.Atoi(value)
+					sddns.static = i
 				}
 			}
 		}
